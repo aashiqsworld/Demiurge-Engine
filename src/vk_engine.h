@@ -10,6 +10,19 @@
 
 #include <vk_types.h>
 
+struct FrameData {
+    VkCommandPool _commandPool;
+    VkCommandBuffer _mainCommandBuffer;
+
+    // _swapchainSemaphore: used so render commands wait on swapchain image request
+    // _renderSemaphore used to control presenting the image to the OS once drawing finishes
+    VkSemaphore _swapchainSemaphore, _renderSemaphore;
+    // _renderFence lets us wait for the draw commands of a given frame to be finished
+    VkFence _renderFence;
+};
+
+constexpr unsigned int FRAME_OVERLAP = 2;
+
 class VulkanEngine {
 public:
 
@@ -19,6 +32,13 @@ public:
 	VkExtent2D _windowExtent{ 1700 , 900 };
 
 	struct SDL_Window* _window{ nullptr };
+
+    FrameData _frames[FRAME_OVERLAP];
+
+    FrameData& get_current_frame() { return _frames[_frameNumber % FRAME_OVERLAP]; };
+
+    VkQueue _graphicsQueue;
+    uint32_t _graphicsQueueFamily;
 
 	static VulkanEngine& Get();
 
