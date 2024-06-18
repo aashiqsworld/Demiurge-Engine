@@ -10,6 +10,27 @@
 
 #include <vk_types.h>
 
+struct DeletionQueue
+{
+    std::deque<std::function<void()>> deletors;
+
+    void push_function(std::function<void()>&& function) {
+        deletors.push_back(function);
+    }
+
+    void flush() {
+        // reverse iterate the deletion queue to execute all the functions
+        for (auto it = deletors.rbegin(); it != deletors.rend(); it++)
+        {
+            (*it)(); // cal functors
+        }
+
+        deletors.clear();
+    }
+
+
+};
+
 struct FrameData {
     VkCommandPool _commandPool;
     VkCommandBuffer _mainCommandBuffer;
@@ -19,6 +40,8 @@ struct FrameData {
     VkSemaphore _swapchainSemaphore, _renderSemaphore;
     // _renderFence lets us wait for the draw commands of a given frame to be finished
     VkFence _renderFence;
+
+    DeletionQueue _deletionQueue;
 };
 
 constexpr unsigned int FRAME_OVERLAP = 2;
@@ -40,6 +63,15 @@ public:
     VkQueue _graphicsQueue;
     uint32_t _graphicsQueueFamily;
 
+    DeletionQueue _mainDeletionQueue;
+
+    VmaAllocator _allocator;
+
+    // draw resources
+    AllocatedImage _drawImage;
+    VkExtent2D _drawExtent;
+
+
 	static VulkanEngine& Get();
 
 	//initializes everything in the engine
@@ -50,6 +82,8 @@ public:
 
 	//draw loop
 	void draw();
+
+    void draw_background(VkCommandBuffer cmd);
 
 	//run main loop
 	void run();
