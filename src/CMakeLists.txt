@@ -1,5 +1,9 @@
 
 # Add source to this project's executable.
+
+add_custom_target(copy_data ALL COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/shaders ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+
 add_executable (engine 
   main.cpp
   vk_types.h
@@ -18,6 +22,8 @@ add_executable (engine
   camera.cpp
   camera.h
 )
+add_dependencies(engine copy_data)
+
 
 set_property(TARGET engine PROPERTY CXX_STANDARD 20)
 target_compile_definitions(engine PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)
