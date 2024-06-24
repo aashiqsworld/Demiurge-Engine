@@ -73,6 +73,9 @@ public:
     VkDescriptorSet _drawImageDescriptors;
     VkDescriptorSetLayout _drawImageDescriptorLayout;
 
+    VkPipeline _gradientPipeline;
+    VkPipelineLayout _gradientPipelineLayout;
+
     // draw resources
     AllocatedImage _drawImage;
     VkExtent2D _drawExtent;
@@ -116,6 +119,8 @@ private:
     void init_commands();
     void init_sync_structures();
     void init_descriptors();
+    void init_pipelines();
+    void init_background_pipelines();
 
 
 };
