@@ -76,6 +76,11 @@ public:
     VkPipeline _gradientPipeline;
     VkPipelineLayout _gradientPipelineLayout;
 
+    // immediate submit structures
+    VkFence _immFence;
+    VkCommandBuffer _immCommandBuffer;
+    VkCommandPool _immCommandPool;
+
     // draw resources
     AllocatedImage _drawImage;
     VkExtent2D _drawExtent;
@@ -96,6 +101,8 @@ public:
 
 	//run main loop
 	void run();
+
+    void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
     VkInstance _instance; //Vulkan library handle
     VkDebugUtilsMessengerEXT _debug_messenger; //Vulkan debug output handle
@@ -121,6 +128,7 @@ private:
     void init_descriptors();
     void init_pipelines();
     void init_background_pipelines();
+    void init_imgui();
 
 
 };
