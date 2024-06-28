@@ -99,6 +99,8 @@ public:
 
     void draw_background(VkCommandBuffer cmd);
 
+    void draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView);
+
 	//run main loop
 	void run();
 

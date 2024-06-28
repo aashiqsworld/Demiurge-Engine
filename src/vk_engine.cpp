@@ -65,6 +65,8 @@ void VulkanEngine::init()
 
     init_pipelines();
 
+    init_imgui();
+
     // everything went fine
     _isInitialized = true;
 }
@@ -356,16 +358,31 @@ void VulkanEngine::draw()
     vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
                              VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+
+    // --- draw imgui ---
+
     // execute a copy from the draw image into the swapchain
     vkutil::copy_image_to_image(cmd, _drawImage.image, _swapchainImages[swapchainImageIndex],
                                 _drawExtent, _swapchainExtent);
 
+    // set swapchain image layout to Attachment Optimal so we can draw it
+    vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
+                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    // draw imgui into the swapchain image
+    draw_imgui(cmd, _swapchainImageViews[swapchainImageIndex]);
+
     // set swapchain image layout to Present so we can show it on the screen
     vkutil::transition_image(cmd, _swapchainImages[swapchainImageIndex],
-                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+                             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     // finalize the command buffer (we can no longer add commands, but it can now be executed)
     VK_CHECK(vkEndCommandBuffer(cmd));
+
+    // --- end imgui draw ---
+
+
 
     // Prepare the submission to the queue
     // We want to wait on the _presentSemaphore, as that semaphore is signaled when the swapchain
@@ -458,6 +475,9 @@ void VulkanEngine::run()
                     stop_rendering = false;
                 }
             }
+
+            // send SDL event to imgui for handling
+            ImGui_ImplSDL2_ProcessEvent(&e);
         }
 
         // do not draw if we are minimized
@@ -467,6 +487,18 @@ void VulkanEngine::run()
             continue;
         }
 
+        // imgui new frame
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+
+        // some imgui UI to test
+        ImGui::ShowDemoWindow();
+
+        // make imgui calculate internal draw structures
+        ImGui::Render();
+
+        // our draw function
         draw();
     }
 }
@@ -621,6 +653,9 @@ void VulkanEngine::init_imgui() {
     // this initializes the core structures of imgui
     ImGui::CreateContext();
 
+    // this initializes imgui for SDL
+    ImGui_ImplSDL2_InitForVulkan(_window);
+
     // this initializes imgui for Vulkan
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = _instance;
@@ -641,6 +676,27 @@ void VulkanEngine::init_imgui() {
 
     ImGui_ImplVulkan_Init(&init_info);
 
+    ImGui_ImplVulkan_CreateFontsTexture();
+
+    // add the imgui destruction function to the deletion queue
+    _mainDeletionQueue.push_function([=]() {
+        ImGui_ImplVulkan_Shutdown();
+        vkDestroyDescriptorPool(_device, imguiPool, nullptr);
+    });
+
+}
+
+void VulkanEngine::draw_imgui(VkCommandBuffer cmd, VkImageView targetImageView) {
+    VkRenderingAttachmentInfo colorAttachment = vkinit::attachment_info(targetImageView, nullptr,
+                                                                        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    VkRenderingInfo renderInfo = vkinit::rendering_info(_swapchainExtent, &colorAttachment,
+                                                        nullptr);
+
+    vkCmdBeginRendering(cmd, &renderInfo);
+
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+
+    vkCmdEndRendering(cmd);
 }
 
 
